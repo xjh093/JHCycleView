@@ -24,7 +24,7 @@
     [self.view addSubview:cycleView];
     
     JHCycleView *cycleView1 = [[JHCycleView alloc] initWithFrame:CGRectMake(0, 220, CGRectGetWidth(self.view.frame), 100)
-                                                         urlData:@[@"head1",@"head2",@"head3",@"head4",@"head5"]];
+                                                       imageData:@[@"head1",@"head2",@"head3",@"head4",@"head5"]];
     [self.view addSubview:cycleView1];
 }
 
