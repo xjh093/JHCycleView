@@ -34,7 +34,7 @@
     return self;
 }
 
-- (instancetype)initWithFrame:(CGRect)frame urlData:(NSArray *)array
+- (instancetype)initWithFrame:(CGRect)frame imageData:(NSArray *)array
 {
     self = [super initWithFrame:frame];
     if (self) {
