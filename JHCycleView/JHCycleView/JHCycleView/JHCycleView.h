@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface JHCycleView : UIView
 
 - (instancetype)initWithFrame:(CGRect)frame textData:(NSArray *)array;
-- (instancetype)initWithFrame:(CGRect)frame urlData:(NSArray *)array;
+- (instancetype)initWithFrame:(CGRect)frame imageData:(NSArray *)array;
 
 @end
 
