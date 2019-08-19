@@ -16,6 +16,8 @@
 @property (nonatomic,  strong) NSTimer *timer;
 @property (nonatomic,  assign) NSInteger  index;
 
+@property (nonatomic,    copy) NSString *holderImageName;
+
 @end
 
 @implementation JHCycleView
@@ -26,8 +28,6 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
-        _dataArray = @[].mutableCopy;
-        
         [self setupViews];
         [self setupSubviews:array type:0];
     }
@@ -38,16 +38,29 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
-        _dataArray = @[].mutableCopy;
-        
         [self setupViews];
         [self setupSubviews:array type:1];
     }
     return self;
 }
 
+- (instancetype)initWithFrame:(CGRect)frame imageURLData:(NSArray *)array holderImage:(NSString *)imageName;
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        _holderImageName = imageName;
+        
+        [self setupViews];
+        [self setupSubviews:array type:2];
+    }
+    return self;
+}
+
 - (void)setupViews
 {
+    _dataArray = @[].mutableCopy;
+    _scrollInterval = 3.0;
+    
     [self addSubview:self.scrollView];
     [self addSubview:self.pageControl];
 }
@@ -61,13 +74,35 @@
     
     NSMutableArray *views = @[].mutableCopy;
     for (NSInteger i = 0; i < marr.count; i++) {
+        UIView *view;
         if (type == 0) {
             UILabel *label = [self setupLabel:marr[i]];
             [views addObject:label];
+            view = label;
         }else if (type == 1) {
             UIImageView *imageView = [self setupImageView:marr[i]];
             [views addObject:imageView];
+            view = imageView;
+        }else if (type == 2) {
+            UIImageView *imageView = [self setupImageView:marr[i]];
+            imageView.image = [UIImage imageNamed:_holderImageName];
+            [views addObject:imageView];
+            
+            dispatch_async(dispatch_get_global_queue(0, 0), ^{
+                NSData *data = [[NSData alloc] initWithContentsOfURL:[NSURL URLWithString:marr[i]]];
+                if (data.length > 0) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        imageView.image = [UIImage imageWithData:data];
+                    });
+                }
+            });
+            
+            view = imageView;
         }
+        
+        view.tag = i;
+        view.userInteractionEnabled = YES;
+        [view addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(didTap:)]];
     }
     
     [self addMenuViews:views];
@@ -96,8 +131,6 @@
     UIImageView *imageView = [[UIImageView alloc] init];
     imageView.frame = CGRectMake(0, 0, width, height);
     imageView.image = [UIImage imageNamed:text];
-    imageView.contentMode = UIViewContentModeScaleAspectFit;
-    imageView.backgroundColor = [UIColor lightGrayColor];
     return imageView;
 }
 
@@ -156,6 +189,25 @@
     }
 }
 
+- (void)didTap:(UIGestureRecognizer *)gesture
+{
+    UIView *view = gesture.view;
+    
+    NSInteger tag = view.tag;
+    if (_dataArray.count > 1) {
+        tag--;
+        if (tag < 0) {
+            tag = _dataArray.count - 2;
+        }else if (tag == _dataArray.count - 2) {
+            tag = 0;
+        }
+    }
+
+    if (_delegate && [_delegate respondsToSelector:@selector(cycleView:didSelectViewAtIndex:)]) {
+        [_delegate cycleView:self didSelectViewAtIndex:tag];
+    }
+}
+
 #pragma mark --- UIScrollViewDelegate
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
@@ -186,6 +238,18 @@
 }
 
 #pragma mark -------------------------------------懒加载-----------------------------------------
+
+- (void)setScrollInterval:(CGFloat)scrollInterval{
+    _scrollInterval = scrollInterval;
+    
+    if (_dataArray.count > 1) {
+        
+        [_timer invalidate];
+        _timer = nil;
+        
+        self.timer.fireDate = [NSDate distantPast];
+    }
+}
 
 - (UIScrollView *)scrollView
 {
@@ -220,7 +284,7 @@
 - (NSTimer *)timer
 {
     if (!_timer) {
-        _timer = [NSTimer scheduledTimerWithTimeInterval:5 target:self selector:@selector(autoScroll) userInfo:nil repeats:YES];
+        _timer = [NSTimer scheduledTimerWithTimeInterval:_scrollInterval target:self selector:@selector(autoScroll) userInfo:nil repeats:YES];
     }
     return _timer;
 }
