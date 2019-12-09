@@ -5,6 +5,27 @@
 //  Created by HaoCold on 2019/8/6.
 //  Copyright © 2019 HaoCold. All rights reserved.
 //
+//  MIT License
+//
+//  Copyright (c) 2019 xjh093
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 #import "JHCycleView.h"
 
@@ -56,6 +77,15 @@
     return self;
 }
 
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self setupViews];
+    }
+    return self;
+}
+
 - (void)setupViews
 {
     _dataArray = @[].mutableCopy;
@@ -85,7 +115,9 @@
             view = imageView;
         }else if (type == 2) {
             UIImageView *imageView = [self setupImageView:marr[i]];
-            imageView.image = [UIImage imageNamed:_holderImageName];
+            if (_holderImageName.length) {
+                imageView.image = [UIImage imageNamed:_holderImageName];
+            }
             [views addObject:imageView];
             
             dispatch_async(dispatch_get_global_queue(0, 0), ^{
@@ -146,18 +178,17 @@
 
 - (void)addMenuViews:(NSArray <UIView *>*)menus
 {
-    if (menus.count == 0) {
-        return;
-    }
-    
     [_dataArray removeAllObjects];
     [_dataArray addObjectsFromArray:menus];
+    [_scrollView.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
     
     if (menus.count > 2) {
         _pageControl.numberOfPages = menus.count - 2;
     }
     
-    [self layoutScrollMenu];
+    if (menus.count > 0) {
+        [self layoutScrollMenu];
+    }
 }
 
 - (void)layoutScrollMenu
@@ -175,7 +206,9 @@
         _scrollView.contentSize = CGSizeMake(width*_dataArray.count, 0);
         _scrollView.contentOffset = CGPointMake(width, 0);
         
-        self.timer.fireDate = [NSDate distantPast];
+        [_timer invalidate];
+        _timer = nil;
+        [[NSRunLoop currentRunLoop] addTimer:self.timer forMode:NSRunLoopCommonModes];
     }
 }
 
@@ -247,8 +280,20 @@
         [_timer invalidate];
         _timer = nil;
         
-        self.timer.fireDate = [NSDate distantPast];
+        [[NSRunLoop currentRunLoop] addTimer:self.timer forMode:NSRunLoopCommonModes];
     }
+}
+
+- (void)setTextData:(NSArray *)textData{
+    [self setupSubviews:textData type:0];
+}
+
+- (void)setImageData:(NSArray *)imageData{
+    [self setupSubviews:imageData type:1];
+}
+
+- (void)setImageURLData:(NSArray *)imageURLData{
+    [self setupSubviews:imageURLData type:2];
 }
 
 - (UIScrollView *)scrollView
@@ -284,7 +329,7 @@
 - (NSTimer *)timer
 {
     if (!_timer) {
-        _timer = [NSTimer scheduledTimerWithTimeInterval:_scrollInterval target:self selector:@selector(autoScroll) userInfo:nil repeats:YES];
+        _timer = [NSTimer timerWithTimeInterval:_scrollInterval target:self selector:@selector(autoScroll) userInfo:nil repeats:YES];
     }
     return _timer;
 }
